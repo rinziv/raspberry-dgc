@@ -2,13 +2,40 @@ import evdev
 import requests
 from evdev import *
 import RPi.GPIO as GPIO
-import time 
+import signal
+import time
+import psutil
+import socket
+
+import logging
+import logging.handlers
+
+mlogger = logging.getLogger('hidScanner')
+mlogger.setLevel(logging.INFO)
+
+#handler = logging.handlers.SysLogHandler()
+handler = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+#handler = logging.handlers.TimedRotatingFileHandler('hidScanner.log', when='d')
+
+mlogger.addHandler(handler)
 
 
 colors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF]
 R = 11
 G = 12
 B = 13
+
+
+def check_verification():
+    conns = psutil.net_connections()
+    for i in conns:
+      if i.type == socket.SOCK_STREAM:
+        if i.laddr.port == 3000:
+          return True 
+    return False
+
+
+
 
 def setup(Rpin, Gpin, Bpin):
    global pins
@@ -30,7 +57,15 @@ def setup(Rpin, Gpin, Bpin):
 def map(x, in_min, in_max, out_min, out_max):
    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 
-def off():
+def on():
+   p_R.start(100)      # Initial duty Cycle = 0(leds off)
+   p_G.start(100)
+   p_B.start(100)
+
+
+
+def off(signum=None, frame=None):
+   #print('turning led off')
    GPIO.setmode(GPIO.BOARD)
    for i in pins:
       GPIO.setup(pins[i], GPIO.OUT)   # Set pins' mode is output
@@ -49,21 +84,38 @@ def setColor(col):   # For example : col = 0x112233
    p_G.ChangeDutyCycle(100-G_val)
    p_B.ChangeDutyCycle(100-B_val)
 
+def destroy(signum=None, frame=None):
+   p_R.stop()
+   p_G.stop()
+   p_B.stop()
+   off()
+   #GPIO.cleanup()
 
 
+print('waiting for the verification service to be up')
+while not check_verification():
+     time.sleep(2)
+print('verification service is alive')
+
+
+
+signal.signal(signal.SIGALRM, destroy)
 
 ## Starting configuration
 setup(R, G, B)
 off()
 
 
+
+
 dev =evdev.InputDevice('/dev/input/by-id/usb-SM_SM-2D_PRODUCT_HID_KBW_APP-000000000-event-kbd')
 #dev =evdev.InputDevice('/dev/input/event4')
 dev.grab()
-print(dev)
+mlogger.info('starting listening to %s ',  dev)
+#print(dev)
 
 setColor(0x333333) #bianco
-
+signal.alarm(5)
 
 
 # for event in dev.read_loop():
@@ -118,25 +170,24 @@ def read_scan():
        yield x 
        x = ''
 
-def destroy():
-   p_R.stop()
-   p_G.stop()
-   p_B.stop()
-   off()
-   GPIO.cleanup()
 
 
 code_generator = read_scan()
 try:
   for i in code_generator:
     setColor(0x0000FF)
-    print('code', i)
+    mlogger.info('code %s', i)
     payload = {'dgc': i}
     r = requests.get('http://localhost:3000/', params=payload)
-    print('Return code: ', r.status_code, ', Text: ', r.text)
+    mlogger.info('Return code: %s, Text: %s', r.status_code, r.text)
     if r.status_code == 200:
+       on()
        setColor(0xFF00FF)
+       signal.alarm(10)
     else:
+       on()
        setColor(0x00FFFF)
+       signal.alarm(10)
 except KeyboardInterrupt:
     destroy()
+    GPIO.cleanup()
