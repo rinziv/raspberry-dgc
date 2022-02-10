@@ -1,0 +1,14 @@
+[Unit]
+Description=Reader for Green Pass verification
+After=network-online.target
+ 
+[Service]
+ExecStart=/usr/bin/python /home/pi/raspberry-dgc/cameraClient/hidScanner.py
+WorkingDirectory=/home/pi/raspberry-dgc/cameraClient
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+ 
+[Install]
+WantedBy=multi-user.target

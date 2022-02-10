@@ -1,0 +1,14 @@
+[Unit]
+Description=Verificator of Green Pass 
+After=network-online.target
+ 
+[Service]
+ExecStart=/usr/bin/node /home/pi/raspberry-dgc/validatorServer/app.js
+WorkingDirectory=/home/pi/raspberry-dgc/validatorServer
+StandardOutput=inherit
+StandardError=inherit
+Restart=always
+User=pi
+ 
+[Install]
+WantedBy=multi-user.target
