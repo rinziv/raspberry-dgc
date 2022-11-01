@@ -183,11 +183,11 @@ try:
     if r.status_code == 200:
        on()
        setColor(0xFF00FF)
-       signal.alarm(10)
+       signal.alarm(20)
     else:
        on()
        setColor(0x00FFFF)
-       signal.alarm(10)
+       signal.alarm(40)
 except KeyboardInterrupt:
     destroy()
     GPIO.cleanup()

@@ -1,65 +1,39 @@
-
-#!/usr/bin/env python
-#---------------------------------------------------
-#
-#       This is a program for Passive Buzzer Module
-#               It will play simple songs.
-#       You could try to make songs by youselves!
-#
-#               Passive buzzer                     Pi
-#                       VCC ----------------- 3.3V
-#                       GND ------------------ GND
-#                       SIG ---------------- Pin 11
-#
-#---------------------------------------------------
-
 import RPi.GPIO as GPIO
 import time
 
-Buzzer = 7
+# Set #17 as buzzer pin
+BeepPin = 22
 
 def setup():
-        GPIO.setmode(GPIO.BOARD)                # Numbers GPIOs by physical location
-        GPIO.setup(Buzzer, GPIO.OUT)    # Set pins' mode is output
-        global Buzz                                             # Assign a global variable to replace GPIO.PWM
-        Buzz = GPIO.PWM(Buzzer, 440)    # 440 is initial frequency.
-        Buzz.start(50)                                  # Start Buzzer pin with 50% duty ration
+    # Set the GPIO modes to BCM Numbering
+    GPIO.setmode(GPIO.BCM)
+    # Set LedPin's mode to output,
+    # and initial level to High(3.3v)
+    GPIO.setup(BeepPin, GPIO.OUT, initial=GPIO.HIGH)
 
+def main():
+    while True:
+        # Buzzer on (Beep)
+        print ('Buzzer On')
+        GPIO.output(BeepPin, GPIO.LOW)
+        time.sleep(0.1)
+        # Buzzer off
+        print ('Buzzer Off')
+        GPIO.output(BeepPin, GPIO.HIGH)
+        time.sleep(0.1)
 
-def success():
-       for  i in [0,1]:
-          Buzz.start(20)
-          Buzz.ChangeFrequency(990)
-          time.sleep(.1)
-          Buzz.stop()
-          time.sleep(.2)
+def destroy():
+    # Turn off buzzer
+    GPIO.output(BeepPin, GPIO.HIGH)
+    # Release resource
+    GPIO.cleanup()
 
-
-def fail():
-       for  i in [0,1]:
-          Buzz.start(90)
-          Buzz.ChangeFrequency(248)
-          time.sleep(.3)
-          Buzz.stop()
-          time.sleep(.2)
-
-
-def loop():
-        while True:
-                success()
-                time.sleep(2)
-                fail()
-                time.sleep(2)
-
-def destory():
-        Buzz.stop()                                     # Stop the buzzer
-        GPIO.output(Buzzer, 1)          # Set Buzzer pin to High
-        GPIO.cleanup()                          # Release resource
-
-if __name__ == '__main__':              # Program start from here
-        setup()
-        try:
-                loop()
-        except KeyboardInterrupt:       # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
-                destory()
-
+# If run this script directly, do:
+if __name__ == '__main__':
+    setup()
+    try:
+        main()
+    # When 'Ctrl+C' is pressed, the program
+    # destroy() will be  executed.
+    except KeyboardInterrupt:
+        destroy()
